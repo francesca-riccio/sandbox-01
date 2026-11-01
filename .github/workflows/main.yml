@@ -20,10 +20,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v5
 
-    - name: set-up Python 3.11
+    - name: set-up Python 3.12
       uses: actions/setup-python@v6
       with:
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Install Python dependencies
       run: |
