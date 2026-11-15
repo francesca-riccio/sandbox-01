@@ -8,8 +8,35 @@ and each column represents a single day across all patients.
 """
 
 import numpy as np
+import json
+import glob
+import os
 
+class CSVDataSource:
+    def __init__(self, dir_path):
+        self.dir_path = dir_path
 
+    def load_inflammation_data(self):
+        data_file_paths = glob.glob(os.path.join(self.dir_path, 'inflammation*.csv'))
+        if len(data_file_paths) == 0:
+            raise ValueError(f"No inflammation data CSV files found in path {self.dir_path}")
+        data = map(load_csv, data_file_paths)
+        return list(data) # Return the list of 2D NumPy arrays with inflammation data
+
+class JSONDataSource:
+    """
+    Loads patient data with inflammation values from JSON files within a specified folder.
+    """ 
+    def __init__(self,dir_path):
+        self.dir_path = dir_path
+
+    def load_inflammation_data(self):
+        data_file_paths = glob.glob(os.path.join(self.dir_path, 'inflammation*.json')) 
+        if len(data_file_paths) == 0:
+            raise ValueError(f"No inflammation data JSON files found in path {self.dir_path}")
+        data = map(load_json, data_file_paths)
+        return list(data)
+ 
 def load_csv(filename):  
     """Load a Numpy array from a CSV
 
@@ -17,6 +44,22 @@ def load_csv(filename):
     """
     return np.loadtxt(fname=filename, delimiter=',')
 
+def load_json(filename):
+    """Load a numpy array from a JSON document.
+    Expected format:
+    [
+      {
+        "observations": [0, 1]
+      },
+      {
+        "observations": [0, 2]
+      }    
+    ]
+    :param filename: Filename of CSV to load
+    """
+    with open(filename, 'r', encoding='utf-8') as file:
+        data_as_json = json.load(file)
+        return [np.array(entry['observations']) for entry in data_as_json]
 
 def daily_mean(data):
     """Calculate the daily mean of a 2d inflammation data array."""
@@ -32,3 +75,21 @@ def daily_min(data):
     """Calculate the daily min of a 2d inflammation data array."""
     return np.min(data, axis=0)
 
+def analyse_data(data_source):
+    """Calculate daily standard deviation between datasets."""
+
+    data = data_source.load_inflammation_data()
+    daily_standard_deviation = compute_standard_deviation_by_day(data)
+
+    return  daily_standard_deviation
+
+
+def compute_standard_deviation_by_day(data):
+    """Calculate the standard deviation of daily means across datasets."""
+    means_by_day = map(daily_mean, data)
+    # list produce a list of arrays, np.stack put them in a NumPy matrix 
+    # where tha arrays become rows as axis = 0 by defaut
+    means_by_day_matrix = np.stack(list(means_by_day))
+
+    daily_standard_deviation = np.std(means_by_day_matrix, axis=0)
+    return daily_standard_deviation
